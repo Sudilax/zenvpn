@@ -5,11 +5,11 @@
                 My Dashboard
             </h2>
             <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-medium
-                {{ $user->vpnDevices->count() >= $user->device_limit ? 'bg-red-100 text-red-700' : 'bg-indigo-100 text-indigo-700' }}">
+                {{ $user->device_limit > 0 && $user->vpnDevices->count() >= $user->device_limit ? 'bg-red-100 text-red-700' : 'bg-indigo-100 text-indigo-700' }}">
                 <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
                     <path d="M13 7H7v6h6V7z"/><path fill-rule="evenodd" d="M7 2a1 1 0 012 0v1h2V2a1 1 0 112 0v1h2a2 2 0 012 2v2h1a1 1 0 110 2h-1v2h1a1 1 0 110 2h-1v2a2 2 0 01-2 2h-2v1a1 1 0 11-2 0v-1H9v1a1 1 0 11-2 0v-1H5a2 2 0 01-2-2v-2H2a1 1 0 110-2h1V9H2a1 1 0 010-2h1V5a2 2 0 012-2h2V2zM5 5h10v10H5V5z" clip-rule="evenodd"/>
                 </svg>
-                {{ $user->vpnDevices->count() }} of {{ $user->device_limit }} devices
+                {{ $user->vpnDevices->count() }} of {{ $user->device_limit === 0 ? 'Unlimited' : $user->device_limit }} devices
             </span>
         </div>
     </x-slot>
@@ -47,29 +47,52 @@
                         <h3 class="text-sm font-semibold text-gray-500 uppercase tracking-wide">Data Usage This Month</h3>
                         <div class="mt-1 flex items-baseline gap-2">
                             <span class="text-3xl font-bold text-gray-900">{{ $user->dataUsedGb() }} GB</span>
-                            <span class="text-sm text-gray-400">of {{ $user->dataCapGb() }} GB</span>
+                            @if ($user->data_cap_mb > 0)
+                                <span class="text-sm text-gray-400">of {{ $user->dataCapGb() }} GB</span>
+                            @else
+                                <span class="text-sm text-gray-400">of Unlimited</span>
+                            @endif
                         </div>
                     </div>
-                    <div class="flex items-center gap-2 bg-indigo-50 text-indigo-700 rounded-lg px-3 py-2">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10"/>
+                    @if ($user->data_cap_mb > 0)
+                        <div class="flex items-center gap-2 bg-indigo-50 text-indigo-700 rounded-lg px-3 py-2">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10"/>
+                            </svg>
+                            <span class="text-sm font-medium">{{ $user->dataUsagePercent() }}%</span>
+                        </div>
+                    @else
+                        <div class="flex items-center gap-2 bg-green-50 text-green-700 rounded-lg px-3 py-2">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"/>
+                            </svg>
+                            <span class="text-sm font-medium">Unlimited</span>
+                        </div>
+                    @endif
+                </div>
+
+                @if ($user->data_cap_mb > 0)
+                    <div class="w-full bg-gray-100 rounded-full h-2.5">
+                        <div class="h-2.5 rounded-full transition-all duration-500
+                            @if($user->dataUsagePercent() >= 90) bg-red-500
+                            @elseif($user->dataUsagePercent() >= 70) bg-amber-500
+                            @else bg-indigo-500
+                            @endif"
+                            style="width: {{ $user->dataUsagePercent() }}%">
+                        </div>
+                    </div>
+                    <p class="mt-2 text-xs text-gray-400">
+                        {{ number_format(($user->data_cap_mb - $user->data_used_mb) / 1024, 2) }} GB remaining
+                        &nbsp;·&nbsp; Resets on the 1st of each month
+                    </p>
+                @else
+                    <div class="flex items-center gap-2 text-sm text-gray-500 bg-gray-50 rounded-lg p-3 border border-gray-100">
+                        <svg class="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
                         </svg>
-                        <span class="text-sm font-medium">{{ $user->dataUsagePercent() }}%</span>
+                        <span>Unlimited data usage &nbsp;·&nbsp; Resets on the 1st of each month</span>
                     </div>
-                </div>
-                <div class="w-full bg-gray-100 rounded-full h-2.5">
-                    <div class="h-2.5 rounded-full transition-all duration-500
-                        @if($user->dataUsagePercent() >= 90) bg-red-500
-                        @elseif($user->dataUsagePercent() >= 70) bg-amber-500
-                        @else bg-indigo-500
-                        @endif"
-                        style="width: {{ $user->dataUsagePercent() }}%">
-                    </div>
-                </div>
-                <p class="mt-2 text-xs text-gray-400">
-                    {{ number_format(($user->data_cap_mb - $user->data_used_mb) / 1024, 2) }} GB remaining
-                    &nbsp;·&nbsp; Resets on the 1st of each month
-                </p>
+                @endif
             </div>
 
             {{-- ── VPN Server Info ──────────────────────────────────────────── --}}
@@ -328,7 +351,13 @@
                                     </svg>
                                 </div>
                                 <span class="text-sm font-medium">Add New Device</span>
-                                <span class="text-xs text-gray-300">{{ $user->device_limit - $user->vpnDevices->count() }} slot(s) remaining</span>
+                                <span class="text-xs text-gray-300">
+                                    @if ($user->device_limit === 0)
+                                        Unlimited slots
+                                    @else
+                                        {{ $user->device_limit - $user->vpnDevices->count() }} slot(s) remaining
+                                    @endif
+                                </span>
                             </button>
 
                             {{-- Add Device Form --}}

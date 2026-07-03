@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use Filament\Models\Contracts\FilamentUser;
+use Filament\Panel;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -11,12 +13,20 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
-#[Fillable(['name', 'email', 'password', 'device_limit', 'data_used_mb', 'data_cap_mb'])]
+#[Fillable(['name', 'email', 'password', 'device_limit', 'data_used_mb', 'data_cap_mb', 'is_admin', 'status'])]
 #[Hidden(['password', 'remember_token'])]
-class User extends Authenticatable implements MustVerifyEmail
+class User extends Authenticatable implements MustVerifyEmail, FilamentUser
 {
     /** @use HasFactory<UserFactory> */
     use HasFactory, Notifiable;
+
+    /**
+     * Only is_admin = true users may access the Filament admin panel.
+     */
+    public function canAccessPanel(Panel $panel): bool
+    {
+        return (bool) $this->is_admin;
+    }
 
     /**
      * Get the attributes that should be cast.
@@ -31,6 +41,7 @@ class User extends Authenticatable implements MustVerifyEmail
             'device_limit'      => 'integer',
             'data_used_mb'      => 'integer',
             'data_cap_mb'       => 'integer',
+            'is_admin'          => 'boolean',
         ];
     }
 
@@ -46,6 +57,9 @@ class User extends Authenticatable implements MustVerifyEmail
     /** Whether this user can add another device */
     public function canAddDevice(): bool
     {
+        if ($this->device_limit === 0) {
+            return true;
+        }
         return $this->vpnDevices()->count() < $this->device_limit;
     }
 
