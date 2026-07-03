@@ -20,6 +20,7 @@ class VpnDevice extends Model
         'last_seen',
         'sni',
         'vpn_username',
+        'device_identifier',
     ];
 
     protected $casts = [

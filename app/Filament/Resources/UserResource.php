@@ -37,6 +37,9 @@ class UserResource extends Resource
                 TextInput::make('email')
                     ->disabled(),
 
+                TextInput::make('fastapi_username')
+                    ->disabled(),
+
                 Select::make('status')
                     ->options([
                         'active'    => 'Active',

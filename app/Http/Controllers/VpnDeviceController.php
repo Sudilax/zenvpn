@@ -37,17 +37,36 @@ class VpnDeviceController extends Controller
             'sni'         => ['required', 'string', Rule::in(array_keys(VpnDevice::SNI_OPTIONS))],
         ]);
 
-        // Generate a unique backend username: u{user_id}-{6 random hex chars}
-        $vpnUsername = 'u' . $user->id . '-' . Str::lower(Str::random(6));
-
         try {
-            // Provision on FastAPI backend — returns real UUIDs
-            $uuids = $this->api->createUser($vpnUsername);
+            if (empty($user->fastapi_username)) {
+                // Generate a unique fastapi_username: laravel-{user_id}
+                $fastapiUsername = 'laravel-' . $user->id;
+
+                // Determine appropriate FastAPI plan based on device limit
+                $plan = 'basic';
+                if ($user->device_limit > 5 || $user->device_limit === 0) {
+                    $plan = 'premium';
+                } elseif ($user->device_limit > 2) {
+                    $plan = 'pro';
+                }
+
+                // Provision on FastAPI backend — returns real UUIDs and the device identifier
+                $uuids = $this->api->createUser($fastapiUsername, $plan);
+                
+                // Save fastapi_username on the user record
+                $user->update(['fastapi_username' => $fastapiUsername]);
+                
+                $deviceIdentifier = $uuids['device'] ?? 'device-1';
+            } else {
+                // Call addDevice instead of creating a new user
+                $uuids = $this->api->addDevice($user->fastapi_username, $validated['device_name'], $validated['sni']);
+                
+                $deviceIdentifier = $validated['device_name'];
+            }
         } catch (ZenVpnApiException $e) {
-            Log::error('[VpnDeviceController] createUser failed', [
-                'vpn_username' => $vpnUsername,
-                'user_id'      => $user->id,
-                'error'        => $e->getMessage(),
+            Log::error('[VpnDeviceController] provisioning failed', [
+                'user_id' => $user->id,
+                'error'   => $e->getMessage(),
             ]);
             return back()
                 ->withInput()
@@ -55,13 +74,14 @@ class VpnDeviceController extends Controller
         }
 
         $user->vpnDevices()->create([
-            'device_name'  => $validated['device_name'],
-            'sni'          => $validated['sni'],
-            'vpn_username' => $vpnUsername,
-            'vless_uuid'   => $uuids['vless_uuid'],
-            'trojan_uuid'  => $uuids['trojan_uuid'],
-            'vmess_uuid'   => $uuids['vmess_uuid'],
-            'status'       => 'active',
+            'device_name'       => $validated['device_name'],
+            'sni'               => $validated['sni'],
+            'vpn_username'      => null, // Clear this to avoid unique constraint issues
+            'device_identifier' => $deviceIdentifier,
+            'vless_uuid'        => $uuids['vless_uuid'],
+            'trojan_uuid'       => $uuids['trojan_uuid'],
+            'vmess_uuid'        => $uuids['vmess_uuid'],
+            'status'            => 'active',
         ]);
 
         return redirect()->route('dashboard')
@@ -102,19 +122,25 @@ class VpnDeviceController extends Controller
      */
     public function destroy(Request $request, VpnDevice $device): RedirectResponse
     {
-        if ($device->user_id !== $request->user()->id) {
+        $user = $request->user();
+        if ($device->user_id !== $user->id) {
             abort(403);
         }
 
         $name = $device->device_name;
 
-        // Call backend to remove the user (silently ignore failures — DB record is always deleted)
-        if ($device->vpn_username) {
+        // Call backend to remove the device
+        if ($user->fastapi_username && $device->device_identifier) {
             try {
-                $this->api->deleteUser($device->vpn_username);
+                $this->api->removeDevice($user->fastapi_username, $device->device_identifier);
             } catch (ZenVpnApiException $e) {
                 // Log is already recorded in the service; carry on to delete from DB
             }
+        }
+
+        // Only if it's their very last device, clear fastapi_username
+        if ($user->vpnDevices()->count() === 1) {
+            $user->update(['fastapi_username' => null]);
         }
 
         $device->delete();

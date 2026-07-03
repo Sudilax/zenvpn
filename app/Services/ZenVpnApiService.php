@@ -199,6 +199,88 @@ class ZenVpnApiService
         }
     }
 
+    // ─── Devices ──────────────────────────────────────────────────────────────
+
+    /**
+     * POST /users/{username}/devices — add a device for a user.
+     * Returns an array with vless_uuid, trojan_uuid, vmess_uuid, etc.
+     *
+     * @throws ZenVpnApiException
+     */
+    public function addDevice(string $username, string $deviceName, string $sni): array
+    {
+        $attempt = 1;
+        $maxAttempts = 2;
+        $postData = null;
+
+        while ($attempt <= $maxAttempts) {
+            try {
+                // Use 30 seconds timeout for this specific call
+                $postData = $this->request('post', "/users/{$username}/devices", [
+                    'device_name' => $deviceName,
+                    'sni'         => $sni,
+                ], 30);
+                break; // Succeeded! Break the retry loop
+            } catch (ZenVpnApiException $e) {
+                // Only retry on connection errors
+                $isConnectionError = str_contains($e->getMessage(), 'Could not connect');
+                
+                if (!$isConnectionError || $attempt === $maxAttempts) {
+                    throw $e; // Rethrow on other errors or last attempt
+                }
+
+                Log::warning("[ZenVPN API] POST /users/{$username}/devices connection attempt {$attempt} failed. Retrying in 1 second...", [
+                    'username' => $username,
+                    'error'    => $e->getMessage()
+                ]);
+
+                $attempt++;
+                sleep(1);
+            }
+        }
+
+        Log::debug('[ZenVPN API] POST /users/{username}/devices raw response', [
+            'username' => $username,
+            'response' => $postData,
+        ]);
+
+        return $postData;
+    }
+
+    /**
+     * DELETE /users/{username}/devices/{deviceIdentifier} — remove a device.
+     * Returns true on success; false if the device/user was not found.
+     *
+     * @throws ZenVpnApiException
+     */
+    public function removeDevice(string $username, string $deviceIdentifier): bool
+    {
+        try {
+            $encodedDevice = rawurlencode($deviceIdentifier);
+            $response = Http::withoutVerifying()
+                ->withToken($this->token())
+                ->timeout(30)
+                ->delete("{$this->baseUrl}/users/{$username}/devices/{$encodedDevice}");
+
+            if ($response->status() === 404) {
+                Log::warning('[ZenVPN API] removeDevice: device or user not found', [
+                    'username'         => $username,
+                    'deviceIdentifier' => $deviceIdentifier
+                ]);
+                return false;
+            }
+
+            if ($response->failed()) {
+                throw new ZenVpnApiException("Delete device '{$deviceIdentifier}' for user '{$username}' failed (HTTP {$response->status()}).");
+            }
+
+            return true;
+        } catch (ConnectionException $e) {
+            Log::error('[ZenVPN API] removeDevice connection error', ['error' => $e->getMessage()]);
+            throw new ZenVpnApiException('Could not connect to the VPN backend: ' . $e->getMessage());
+        }
+    }
+
     // ─── Internals ────────────────────────────────────────────────────────────
 
     /**
@@ -269,7 +351,12 @@ class ZenVpnApiService
             $vmess  = $dev['vmess_uuid']  ?? null;
 
             if ($vless && $trojan && $vmess) {
-                return ['vless_uuid' => $vless, 'trojan_uuid' => $trojan, 'vmess_uuid' => $vmess];
+                return [
+                    'vless_uuid'  => $vless,
+                    'trojan_uuid' => $trojan,
+                    'vmess_uuid'  => $vmess,
+                    'device'      => $dev['device'] ?? null,
+                ];
             }
         }
 
@@ -279,7 +366,12 @@ class ZenVpnApiService
         $vmess  = $data['vmess_uuid']  ?? null;
 
         if ($vless && $trojan && $vmess) {
-            return ['vless_uuid' => $vless, 'trojan_uuid' => $trojan, 'vmess_uuid' => $vmess];
+            return [
+                'vless_uuid'  => $vless,
+                'trojan_uuid' => $trojan,
+                'vmess_uuid'  => $vmess,
+                'device'      => 'device-1',
+            ];
         }
 
         // ── 3. Single shared UUID (one UUID for VLESS/VMess; Trojan may use password) ──
@@ -289,6 +381,7 @@ class ZenVpnApiService
                 'vless_uuid'  => $sharedUuid,
                 'trojan_uuid' => $data['password'] ?? $sharedUuid,
                 'vmess_uuid'  => $sharedUuid,
+                'device'      => 'device-1',
             ];
         }
 
@@ -302,7 +395,12 @@ class ZenVpnApiService
                 $vmess  = $proxies['vmess']['uuid']      ?? $proxies['vmess']['id']       ?? null;
 
                 if ($vless && $trojan && $vmess) {
-                    return ['vless_uuid' => $vless, 'trojan_uuid' => $trojan, 'vmess_uuid' => $vmess];
+                    return [
+                        'vless_uuid'  => $vless,
+                        'trojan_uuid' => $trojan,
+                        'vmess_uuid'  => $vmess,
+                        'device'      => 'device-1',
+                    ];
                 }
             }
 
@@ -321,7 +419,12 @@ class ZenVpnApiService
                 $vmess  = $indexed['vmess']['uuid']      ?? $indexed['vmess']['id']       ?? null;
 
                 if ($vless && $trojan && $vmess) {
-                    return ['vless_uuid' => $vless, 'trojan_uuid' => $trojan, 'vmess_uuid' => $vmess];
+                    return [
+                        'vless_uuid'  => $vless,
+                        'trojan_uuid' => $trojan,
+                        'vmess_uuid'  => $vmess,
+                        'device'      => 'device-1',
+                    ];
                 }
             }
         }

@@ -32,7 +32,7 @@ class VpnDeviceResource extends Resource
     {
         return $schema->components([
             TextInput::make('device_name')->disabled(),
-            TextInput::make('vpn_username')->disabled(),
+            TextInput::make('device_identifier')->disabled(),
             TextInput::make('sni')->disabled(),
             TextInput::make('status')->disabled(),
         ]);
@@ -118,14 +118,16 @@ class VpnDeviceResource extends Resource
                         "This will also delete the user from the VPN backend."
                     )
                     ->action(function (VpnDevice $record): void {
-                        // Call FastAPI backend to remove user
-                        if ($record->vpn_username) {
+                        // Call FastAPI backend to remove device
+                        $user = $record->user;
+                        if ($user && $user->fastapi_username && $record->device_identifier) {
                             try {
-                                app(ZenVpnApiService::class)->deleteUser($record->vpn_username);
+                                app(ZenVpnApiService::class)->removeDevice($user->fastapi_username, $record->device_identifier);
                             } catch (ZenVpnApiException $e) {
                                 Log::warning('[Admin] Backend delete failed on revoke', [
-                                    'vpn_username' => $record->vpn_username,
-                                    'error'        => $e->getMessage(),
+                                    'username'          => $user->fastapi_username,
+                                    'device_identifier' => $record->device_identifier,
+                                    'error'             => $e->getMessage(),
                                 ]);
                             }
                         }
@@ -145,12 +147,14 @@ class VpnDeviceResource extends Resource
                         ->before(function ($records): void {
                             $api = app(ZenVpnApiService::class);
                             foreach ($records as $device) {
-                                if ($device->vpn_username) {
+                                $user = $device->user;
+                                if ($user && $user->fastapi_username && $device->device_identifier) {
                                     try {
-                                        $api->deleteUser($device->vpn_username);
+                                        $api->removeDevice($user->fastapi_username, $device->device_identifier);
                                     } catch (ZenVpnApiException $e) {
                                         Log::warning('[Admin] Bulk backend delete failed', [
-                                            'vpn_username' => $device->vpn_username,
+                                            'username'          => $user->fastapi_username,
+                                            'device_identifier' => $device->device_identifier,
                                         ]);
                                     }
                                 }
