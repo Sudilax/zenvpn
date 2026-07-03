@@ -96,78 +96,96 @@
 
                     {{-- ── Device Cards ──────────────────────────────────── --}}
                     @foreach ($devices as $device)
-                        <div x-data="{ showConfig: false, activeTab: 'vless', copied: false }" class="relative bg-white rounded-xl shadow-sm border border-gray-100 p-5 flex flex-col gap-4">
+                        <div x-data="{
+                                panel: null,
+                                activeTab: 'vless',
+                                copied: false,
+                                editName: @js($device->device_name),
+                                editSni: @js($device->sni)
+                            }"
+                            class="relative bg-white rounded-xl shadow-sm border border-gray-100 p-5 flex flex-col gap-4 min-h-[220px]">
 
-                            {{-- Card Header --}}
-                            <div class="flex items-start justify-between">
-                                <div class="flex items-center gap-3">
-                                    <div class="flex items-center justify-center w-10 h-10 rounded-lg bg-indigo-50">
-                                        <svg class="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
-                                        </svg>
+                            {{-- ── Default Card View ───────────────────── --}}
+                            <div x-show="panel === null">
+
+                                {{-- Card Header --}}
+                                <div class="flex items-start justify-between mb-3">
+                                    <div class="flex items-center gap-3">
+                                        <div class="flex items-center justify-center w-10 h-10 rounded-lg bg-indigo-50 shrink-0">
+                                            <svg class="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+                                            </svg>
+                                        </div>
+                                        <div>
+                                            <p class="font-semibold text-gray-900 text-sm leading-tight">{{ $device->device_name }}</p>
+                                            <p class="text-xs text-gray-400 mt-0.5">Added {{ $device->created_at->diffForHumans() }}</p>
+                                        </div>
                                     </div>
-                                    <div>
-                                        <p class="font-semibold text-gray-900 text-sm leading-tight">{{ $device->device_name }}</p>
-                                        <p class="text-xs text-gray-400 mt-0.5">
-                                            Added {{ $device->created_at->diffForHumans() }}
-                                        </p>
-                                    </div>
+                                    <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium shrink-0
+                                        {{ $device->status === 'active' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500' }}">
+                                        <span class="w-1.5 h-1.5 rounded-full {{ $device->status === 'active' ? 'bg-green-500' : 'bg-gray-400' }}"></span>
+                                        {{ ucfirst($device->status) }}
+                                    </span>
                                 </div>
-                                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium
-                                    {{ $device->status === 'active' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500' }}">
-                                    <span class="w-1.5 h-1.5 rounded-full {{ $device->status === 'active' ? 'bg-green-500' : 'bg-gray-400' }}"></span>
-                                    {{ ucfirst($device->status) }}
-                                </span>
-                            </div>
 
-                            {{-- Last Seen --}}
-                            <p class="text-xs text-gray-400">
-                                <span class="font-medium text-gray-500">Last seen:</span>
-                                {{ $device->last_seen ? $device->last_seen->diffForHumans() : 'Never' }}
-                                @if($device->last_ip)
-                                    &nbsp;·&nbsp; <code class="font-mono">{{ $device->last_ip }}</code>
-                                @endif
-                            </p>
+                                {{-- SNI Chip + Last Seen --}}
+                                <div class="flex items-center gap-2 mb-3">
+                                    <span class="inline-flex items-center gap-1 px-2 py-1 bg-indigo-50 text-indigo-700 rounded-md text-xs font-medium">
+                                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9"/>
+                                        </svg>
+                                        {{ $device->sniLabel() }}
+                                    </span>
+                                    <span class="text-xs text-gray-400">
+                                        Last seen: {{ $device->last_seen ? $device->last_seen->diffForHumans() : 'Never' }}
+                                    </span>
+                                </div>
 
-                            {{-- Action Buttons --}}
-                            <div class="flex items-center gap-2 mt-auto">
-                                <button @click="showConfig = !showConfig"
-                                    class="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-medium rounded-lg transition-colors duration-150">
-                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
-                                    </svg>
-                                    View Config
-                                </button>
+                                {{-- Action Buttons --}}
+                                <div class="flex items-center gap-2 mt-auto">
+                                    <button @click="panel = 'config'"
+                                        class="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-medium rounded-lg transition-colors duration-150">
+                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                                        </svg>
+                                        Config
+                                    </button>
 
-                                <form method="POST" action="{{ route('devices.destroy', $device) }}"
-                                    onsubmit="return confirm('Remove device \'{{ addslashes($device->device_name) }}\'? This cannot be undone.')">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button type="submit"
-                                        class="inline-flex items-center justify-center p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors duration-150"
-                                        title="Remove device">
+                                    <button @click="panel = 'edit'"
+                                        class="inline-flex items-center justify-center p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors duration-150"
+                                        title="Edit device">
                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
                                         </svg>
                                     </button>
-                                </form>
+
+                                    <form method="POST" action="{{ route('devices.destroy', $device) }}"
+                                        onsubmit="return confirm('Remove device \'{{ addslashes($device->device_name) }}\'? This cannot be undone.')">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit"
+                                            class="inline-flex items-center justify-center p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors duration-150"
+                                            title="Remove device">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                                            </svg>
+                                        </button>
+                                    </form>
+                                </div>
                             </div>
 
-                            {{-- ── Config Panel (inline, Alpine.js) ──────── --}}
-                            <div x-show="showConfig"
+                            {{-- ── Config Panel ─────────────────────────────── --}}
+                            <div x-show="panel === 'config'"
                                 x-transition:enter="transition ease-out duration-200"
                                 x-transition:enter-start="opacity-0 scale-95"
                                 x-transition:enter-end="opacity-100 scale-100"
-                                x-transition:leave="transition ease-in duration-150"
-                                x-transition:leave-start="opacity-100 scale-100"
-                                x-transition:leave-end="opacity-0 scale-95"
-                                class="absolute inset-0 bg-white rounded-xl border border-indigo-200 shadow-lg p-5 z-10 flex flex-col gap-3 overflow-auto"
+                                class="absolute inset-0 bg-white rounded-xl border border-indigo-200 shadow-lg p-5 z-10 flex flex-col gap-3"
                                 style="display: none;">
 
-                                <div class="flex items-center justify-between">
-                                    <p class="text-sm font-semibold text-gray-800">Config: {{ $device->device_name }}</p>
-                                    <button @click="showConfig = false" class="text-gray-400 hover:text-gray-600">
+                                <div class="flex items-center justify-between shrink-0">
+                                    <p class="text-sm font-semibold text-gray-800 truncate pr-2">{{ $device->device_name }}</p>
+                                    <button @click="panel = null" class="text-gray-400 hover:text-gray-600 shrink-0">
                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
                                         </svg>
@@ -175,7 +193,7 @@
                                 </div>
 
                                 {{-- Protocol Tabs --}}
-                                <div class="flex gap-1 bg-gray-100 rounded-lg p-1 text-xs">
+                                <div class="flex gap-1 bg-gray-100 rounded-lg p-1 text-xs shrink-0">
                                     <button @click="activeTab = 'vless'"
                                         :class="activeTab === 'vless' ? 'bg-white shadow text-indigo-700 font-semibold' : 'text-gray-500 hover:text-gray-700'"
                                         class="flex-1 px-2 py-1.5 rounded-md transition-all duration-150">VLESS</button>
@@ -188,14 +206,14 @@
                                 </div>
 
                                 {{-- URI Display --}}
-                                <div class="relative">
-                                    <div x-show="activeTab === 'vless'" class="bg-gray-50 rounded-lg p-3 pr-10">
+                                <div class="relative flex-1 overflow-hidden">
+                                    <div x-show="activeTab === 'vless'" class="bg-gray-50 rounded-lg p-3 pr-10 h-full overflow-auto">
                                         <p class="font-mono text-xs text-gray-700 break-all leading-relaxed" id="uri-vless-{{ $device->id }}">{{ $device->getVlessUri() }}</p>
                                     </div>
-                                    <div x-show="activeTab === 'trojan'" class="bg-gray-50 rounded-lg p-3 pr-10" style="display:none">
+                                    <div x-show="activeTab === 'trojan'" class="bg-gray-50 rounded-lg p-3 pr-10 h-full overflow-auto" style="display:none">
                                         <p class="font-mono text-xs text-gray-700 break-all leading-relaxed" id="uri-trojan-{{ $device->id }}">{{ $device->getTrojanUri() }}</p>
                                     </div>
-                                    <div x-show="activeTab === 'vmess'" class="bg-gray-50 rounded-lg p-3 pr-10" style="display:none">
+                                    <div x-show="activeTab === 'vmess'" class="bg-gray-50 rounded-lg p-3 pr-10 h-full overflow-auto" style="display:none">
                                         <p class="font-mono text-xs text-gray-700 break-all leading-relaxed" id="uri-vmess-{{ $device->id }}">{{ $device->getVmessUri() }}</p>
                                     </div>
 
@@ -217,16 +235,88 @@
                                     </button>
                                 </div>
 
-                                <p class="text-xs text-gray-400 text-center">
-                                    Import this URI into your VPN client (v2rayN, Clash, Shadowrocket, etc.)
+                                {{-- SNI note --}}
+                                <p class="text-xs text-gray-400 text-center shrink-0">
+                                    SNI: <span class="font-medium text-gray-600">{{ $device->sni }}</span>
+                                    &nbsp;·&nbsp; Import into v2rayN, Clash, Shadowrocket, etc.
                                 </p>
                             </div>
-                        </div>
+
+                            {{-- ── Edit Panel ───────────────────────────────── --}}
+                            <div x-show="panel === 'edit'"
+                                x-transition:enter="transition ease-out duration-200"
+                                x-transition:enter-start="opacity-0 scale-95"
+                                x-transition:enter-end="opacity-100 scale-100"
+                                class="absolute inset-0 bg-white rounded-xl border border-amber-200 shadow-lg p-5 z-10 flex flex-col gap-4"
+                                style="display: none;">
+
+                                <div class="flex items-center justify-between">
+                                    <p class="text-sm font-semibold text-gray-800">Edit Device</p>
+                                    <button @click="panel = null" class="text-gray-400 hover:text-gray-600">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                                        </svg>
+                                    </button>
+                                </div>
+
+                                <form method="POST" action="{{ route('devices.update', $device) }}" class="flex flex-col gap-3 flex-1">
+                                    @csrf
+                                    @method('PATCH')
+
+                                    {{-- Device Name --}}
+                                    <div>
+                                        <label class="block text-xs font-medium text-gray-600 mb-1">Device Name</label>
+                                        <input
+                                            type="text"
+                                            name="device_name"
+                                            x-model="editName"
+                                            maxlength="64"
+                                            required
+                                            class="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-amber-400 focus:border-amber-400 outline-none transition-shadow"
+                                        />
+                                    </div>
+
+                                    {{-- SNI Dropdown --}}
+                                    <div>
+                                        <label class="block text-xs font-medium text-gray-600 mb-1">SNI (Server Name)</label>
+                                        <select
+                                            name="sni"
+                                            x-model="editSni"
+                                            class="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-amber-400 focus:border-amber-400 outline-none transition-shadow bg-white">
+                                            @foreach (\App\Models\VpnDevice::SNI_OPTIONS as $domain => $label)
+                                                <option value="{{ $domain }}" {{ $device->sni === $domain ? 'selected' : '' }}>
+                                                    {{ $label }} — {{ $domain }}
+                                                </option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+
+                                    {{-- SNI change warning --}}
+                                    <div x-show="editSni !== @js($device->sni)"
+                                        class="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2"
+                                        style="display:none">
+                                        <svg class="w-4 h-4 text-amber-500 shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                                            <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                                        </svg>
+                                        <p class="text-xs text-amber-700">Changing SNI requires reconnecting on your VPN app with the updated config.</p>
+                                    </div>
+
+                                    <button type="submit"
+                                        class="mt-auto w-full inline-flex items-center justify-center gap-2 px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white text-sm font-medium rounded-lg transition-colors duration-150">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                                        </svg>
+                                        Save Changes
+                                    </button>
+                                </form>
+                            </div>
+
+                        </div>{{-- /device card --}}
                     @endforeach
 
                     {{-- ── Add Device Card ──────────────────────────────── --}}
                     @if ($user->canAddDevice())
-                        <div x-data="{ showForm: false }" class="bg-white rounded-xl border-2 border-dashed border-gray-200 hover:border-indigo-300 transition-colors duration-200 p-5 flex flex-col">
+                        <div x-data="{ showForm: false }" class="bg-white rounded-xl border-2 border-dashed border-gray-200 hover:border-indigo-300 transition-colors duration-200 p-5 flex flex-col min-h-[220px]">
 
                             {{-- Toggle Button --}}
                             <button @click="showForm = !showForm"
@@ -246,10 +336,10 @@
                                 x-transition:enter="transition ease-out duration-200"
                                 x-transition:enter-start="opacity-0 translate-y-2"
                                 x-transition:enter-end="opacity-100 translate-y-0"
-                                class="flex flex-col gap-4"
+                                class="flex flex-col gap-3 h-full"
                                 style="display: none;">
 
-                                <div class="flex items-center justify-between">
+                                <div class="flex items-center justify-between shrink-0">
                                     <p class="text-sm font-semibold text-gray-800">Add New Device</p>
                                     <button @click="showForm = false" class="text-gray-400 hover:text-gray-600">
                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -258,8 +348,10 @@
                                     </button>
                                 </div>
 
-                                <form method="POST" action="{{ route('devices.store') }}" class="flex flex-col gap-3">
+                                <form method="POST" action="{{ route('devices.store') }}" class="flex flex-col gap-3 flex-1">
                                     @csrf
+
+                                    {{-- Device Name --}}
                                     <div>
                                         <label for="device_name" class="block text-xs font-medium text-gray-600 mb-1">Device Name</label>
                                         <input
@@ -273,22 +365,36 @@
                                             class="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-shadow"
                                         />
                                     </div>
-                                    <p class="text-xs text-gray-400">
-                                        A unique UUID config will be generated automatically.
-                                    </p>
+
+                                    {{-- SNI Dropdown --}}
+                                    <div>
+                                        <label for="sni" class="block text-xs font-medium text-gray-600 mb-1">SNI (Server Name)</label>
+                                        <select
+                                            id="sni"
+                                            name="sni"
+                                            class="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-shadow bg-white">
+                                            @foreach (\App\Models\VpnDevice::SNI_OPTIONS as $domain => $label)
+                                                <option value="{{ $domain }}" {{ old('sni', 'm.zoom.us') === $domain ? 'selected' : '' }}>
+                                                    {{ $label }} — {{ $domain }}
+                                                </option>
+                                            @endforeach
+                                        </select>
+                                        <p class="mt-1 text-xs text-gray-400">Choose an SNI that works best in your network.</p>
+                                    </div>
+
                                     <button type="submit"
-                                        class="w-full inline-flex items-center justify-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-lg transition-colors duration-150">
+                                        class="mt-auto w-full inline-flex items-center justify-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-lg transition-colors duration-150">
                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
                                         </svg>
-                                        Generate & Add Device
+                                        Provision & Add Device
                                     </button>
                                 </form>
                             </div>
                         </div>
                     @else
                         {{-- Limit Reached Card --}}
-                        <div class="bg-gray-50 rounded-xl border border-gray-200 p-5 flex flex-col items-center justify-center gap-2 text-center py-10">
+                        <div class="bg-gray-50 rounded-xl border border-gray-200 p-5 flex flex-col items-center justify-center gap-2 text-center min-h-[220px]">
                             <div class="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center">
                                 <svg class="w-5 h-5 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
                                     <path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd"/>

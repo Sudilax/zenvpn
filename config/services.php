@@ -35,4 +35,10 @@ return [
         ],
     ],
 
+    'zenvpn_api' => [
+        'url'      => env('FASTAPI_URL', 'https://zenvpnsl.duckdns.org:8001'),
+        'username' => env('FASTAPI_ADMIN_USERNAME', 'admin'),
+        'password' => env('FASTAPI_ADMIN_PASSWORD', ''),
+    ],
+
 ];

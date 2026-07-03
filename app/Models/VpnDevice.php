@@ -18,11 +18,28 @@ class VpnDevice extends Model
         'status',
         'last_ip',
         'last_seen',
+        'sni',
+        'vpn_username',
     ];
 
     protected $casts = [
         'last_seen'  => 'datetime',
         'created_at' => 'datetime',
+    ];
+
+    /**
+     * SNI options available in the UI.
+     * Key = domain, value = human-readable label.
+     */
+    public const SNI_OPTIONS = [
+        'm.zoom.us'           => 'Zoom',
+        'www.google.com'      => 'Google',
+        'www.facebook.com'    => 'Facebook',
+        'www.microsoft.com'   => 'Microsoft',
+        'www.cloudflare.com'  => 'Cloudflare',
+        'www.apple.com'       => 'Apple',
+        'teams.microsoft.com' => 'Microsoft Teams',
+        'web.whatsapp.com'    => 'WhatsApp Web',
     ];
 
     // ─── Relationships ────────────────────────────────────────────────────────
@@ -34,18 +51,22 @@ class VpnDevice extends Model
 
     // ─── VPN URI Helpers ─────────────────────────────────────────────────────
 
-    /** VLESS URI for this device */
+    /** VLESS URI for this device using its stored SNI */
     public function getVlessUri(): string
     {
         $encoded = rawurlencode($this->device_name);
-        return "vless://{$this->vless_uuid}@zenvpnsl.duckdns.org:443?type=tcp&security=tls&sni=zenvpnsl.duckdns.org#{$encoded}";
+        $sni     = $this->sni ?? 'm.zoom.us';
+
+        return "vless://{$this->vless_uuid}@zenvpnsl.duckdns.org:443?type=tcp&security=tls&sni={$sni}#{$encoded}";
     }
 
-    /** Trojan URI for this device */
+    /** Trojan URI for this device using its stored SNI */
     public function getTrojanUri(): string
     {
         $encoded = rawurlencode($this->device_name);
-        return "trojan://{$this->trojan_uuid}@zenvpnsl.duckdns.org:443?sni=zenvpnsl.duckdns.org#{$encoded}";
+        $sni     = $this->sni ?? 'm.zoom.us';
+
+        return "trojan://{$this->trojan_uuid}@zenvpnsl.duckdns.org:443?sni={$sni}#{$encoded}";
     }
 
     /** VMess URI for this device (standard base64 JSON format) */
@@ -61,8 +82,15 @@ class VpnDevice extends Model
             'net'  => 'tcp',
             'type' => 'none',
             'tls'  => 'tls',
+            'sni'  => $this->sni ?? 'm.zoom.us',
         ];
 
         return 'vmess://' . base64_encode(json_encode($config));
+    }
+
+    /** Human-readable SNI label (e.g. "Zoom") */
+    public function sniLabel(): string
+    {
+        return self::SNI_OPTIONS[$this->sni] ?? $this->sni;
     }
 }

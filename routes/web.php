@@ -23,6 +23,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     // VPN Devices
     Route::post('/devices', [VpnDeviceController::class, 'store'])->name('devices.store');
+    Route::patch('/devices/{device}', [VpnDeviceController::class, 'update'])->name('devices.update');
     Route::delete('/devices/{device}', [VpnDeviceController::class, 'destroy'])->name('devices.destroy');
 });
 
