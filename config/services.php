@@ -41,4 +41,9 @@ return [
         'password' => env('FASTAPI_ADMIN_PASSWORD', ''),
     ],
 
+    // VPN connection address shown to end-users in VLESS/Trojan/VMess config URIs
+    'zenvpn' => [
+        'server_host' => env('ZENVPN_SERVER_HOST', 'zenvpnsl.duckdns.org'),
+    ],
+
 ];

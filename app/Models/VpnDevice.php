@@ -56,8 +56,9 @@ class VpnDevice extends Model
     {
         $encoded = rawurlencode($this->device_name);
         $sni     = $this->sni ?? 'm.zoom.us';
+        $host    = config('services.zenvpn.server_host', 'zenvpnsl.duckdns.org');
 
-        return "vless://{$this->vless_uuid}@zenvpnsl.duckdns.org:443?type=tcp&security=tls&sni={$sni}#{$encoded}";
+        return "vless://{$this->vless_uuid}@{$host}:443?type=tcp&security=tls&sni={$sni}#{$encoded}";
     }
 
     /** Trojan URI for this device using its stored SNI */
@@ -65,17 +66,19 @@ class VpnDevice extends Model
     {
         $encoded = rawurlencode($this->device_name);
         $sni     = $this->sni ?? 'm.zoom.us';
+        $host    = config('services.zenvpn.server_host', 'zenvpnsl.duckdns.org');
 
-        return "trojan://{$this->trojan_uuid}@zenvpnsl.duckdns.org:443?sni={$sni}#{$encoded}";
+        return "trojan://{$this->trojan_uuid}@{$host}:443?sni={$sni}#{$encoded}";
     }
 
     /** VMess URI for this device (standard base64 JSON format) */
     public function getVmessUri(): string
     {
+        $host   = config('services.zenvpn.server_host', 'zenvpnsl.duckdns.org');
         $config = [
             'v'    => '2',
             'ps'   => $this->device_name,
-            'add'  => 'zenvpnsl.duckdns.org',
+            'add'  => $host,
             'port' => '443',
             'id'   => $this->vmess_uuid,
             'aid'  => '0',

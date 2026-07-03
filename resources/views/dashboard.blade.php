@@ -80,7 +80,7 @@
                     </svg>
                 </span>
                 <span class="text-sm text-gray-600">
-                    VPN Server: <code class="font-mono font-semibold text-gray-800 bg-gray-100 px-1.5 py-0.5 rounded">zenvpnsl.duckdns.org</code>
+                    VPN Server: <code class="font-mono font-semibold text-gray-800 bg-gray-100 px-1.5 py-0.5 rounded">{{ config('services.zenvpn.server_host') }}</code>
                 </span>
                 <span class="ml-auto flex items-center gap-1.5 text-xs text-green-600 font-medium">
                     <span class="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span>
