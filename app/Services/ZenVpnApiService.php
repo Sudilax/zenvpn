@@ -89,11 +89,36 @@ class ZenVpnApiService
      */
     public function createUser(string $username, string $plan = 'basic'): array
     {
-        $postData = $this->request('post', '/users', [
-            'username' => $username,
-            'plan'     => $plan,
-            'notes'    => 'Created via ZenVPN portal',
-        ]);
+        $attempt = 1;
+        $maxAttempts = 2;
+        $postData = null;
+
+        while ($attempt <= $maxAttempts) {
+            try {
+                // Use 30 seconds timeout for this specific call
+                $postData = $this->request('post', '/users', [
+                    'username' => $username,
+                    'plan'     => $plan,
+                    'notes'    => 'Created via ZenVPN portal',
+                ], 30);
+                break; // Succeeded! Break the retry loop
+            } catch (ZenVpnApiException $e) {
+                // Only retry on connection errors
+                $isConnectionError = str_contains($e->getMessage(), 'Could not connect');
+                
+                if (!$isConnectionError || $attempt === $maxAttempts) {
+                    throw $e; // Rethrow on other errors or last attempt
+                }
+
+                Log::warning("[ZenVPN API] POST /users connection attempt {$attempt} failed. Retrying in 1 second...", [
+                    'username' => $username,
+                    'error'    => $e->getMessage()
+                ]);
+
+                $attempt++;
+                sleep(1);
+            }
+        }
 
         // Log the full POST response so we can see exactly what the backend returns
         Log::debug('[ZenVPN API] POST /users raw response', [
@@ -181,15 +206,15 @@ class ZenVpnApiService
      *
      * @throws ZenVpnApiException
      */
-    private function request(string $method, string $path, array $body = []): array
+    private function request(string $method, string $path, array $body = [], int $timeout = 10): array
     {
         try {
-            $response = $this->makeRequest($method, $path, $body, $this->token());
+            $response = $this->makeRequest($method, $path, $body, $this->token(), $timeout);
 
             // If unauthorized, clear cached token and retry once
             if ($response->status() === 401) {
                 Cache::forget(self::TOKEN_CACHE_KEY);
-                $response = $this->makeRequest($method, $path, $body, $this->token());
+                $response = $this->makeRequest($method, $path, $body, $this->token(), $timeout);
             }
 
             if ($response->failed()) {
@@ -209,11 +234,11 @@ class ZenVpnApiService
         }
     }
 
-    private function makeRequest(string $method, string $path, array $body, string $token)
+    private function makeRequest(string $method, string $path, array $body, string $token, int $timeout = 10)
     {
         $http = Http::withoutVerifying()
             ->withToken($token)
-            ->timeout(10);
+            ->timeout($timeout);
 
         return match (strtolower($method)) {
             'post'   => $http->post("{$this->baseUrl}{$path}", $body),
