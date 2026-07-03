@@ -83,9 +83,12 @@ class UserResource extends Resource
                     ->searchable()
                     ->sortable(),
 
-                Tables\Columns\TextColumn::make('vpnDevices_count')
+                Tables\Columns\TextColumn::make('vpn_devices_count')
                     ->label('Devices')
                     ->counts('vpnDevices')
+                    ->formatStateUsing(fn ($state, User $record): string =>
+                        ($state ?? 0) . ' / ' . ($record->device_limit === 0 ? 'Unlimited' : $record->device_limit)
+                    )
                     ->sortable(),
 
                 Tables\Columns\TextColumn::make('data_usage')

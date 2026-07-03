@@ -51,7 +51,13 @@ class VpnDeviceResource extends Resource
 
                 Tables\Columns\TextColumn::make('user.email')
                     ->label('Owner')
-                    ->searchable()
+                    ->description(fn (VpnDevice $record): ?string => $record->user?->name)
+                    ->searchable(query: function ($query, string $search) {
+                        return $query->whereHas('user', function ($q) use ($search) {
+                            $q->where('name', 'like', "%{$search}%")
+                              ->orWhere('email', 'like', "%{$search}%");
+                        });
+                    })
                     ->sortable(),
 
                 Tables\Columns\TextColumn::make('sni')
