@@ -23,7 +23,7 @@ class VpnDeviceController extends Controller
      */
     public function store(Request $request): RedirectResponse
     {
-        $user = $request->user();
+        $user = $request->user()->fresh();
 
         // Enforce device limit
         if (! $user->canAddDevice()) {

@@ -82,7 +82,7 @@
                         </div>
                     </div>
                     <p class="mt-2 text-xs text-gray-400">
-                        {{ number_format(($user->data_cap_mb - $user->data_used_mb) / 1024, 2) }} GB remaining
+                        {{ number_format(max(0, $user->data_cap_mb - $user->data_used_mb) / 1024, 2) }} GB remaining
                         &nbsp;·&nbsp; Resets on the 1st of each month
                     </p>
                 @else
@@ -161,6 +161,14 @@
                                     </span>
                                     <span class="text-xs text-gray-400">
                                         Last seen: {{ $device->last_seen ? $device->last_seen->diffForHumans() : 'Never' }}
+                                    </span>
+                                </div>
+                                <div class="flex items-center gap-2 mb-3">
+                                    <span class="text-xs font-medium text-gray-500 flex items-center gap-1">
+                                        <svg class="w-3 h-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                                        </svg>
+                                        Usage: <span class="text-gray-900">{{ $device->formattedUsage() }}</span>
                                     </span>
                                 </div>
 

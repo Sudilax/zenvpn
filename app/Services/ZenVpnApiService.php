@@ -170,6 +170,16 @@ class ZenVpnApiService
     }
 
     /**
+     * GET /users/{username}/usage — fetch total data usage and per-device usage.
+     *
+     * @throws ZenVpnApiException
+     */
+    public function getUserUsage(string $username): array
+    {
+        return $this->request('get', "/users/{$username}/usage");
+    }
+
+    /**
      * DELETE /users/{username} — remove a user from the backend.
      * Returns true on success; false if the user was not found (404).
      *

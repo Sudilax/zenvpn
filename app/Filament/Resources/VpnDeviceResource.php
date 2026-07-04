@@ -91,6 +91,11 @@ class VpnDeviceResource extends Resource
                     ->since()
                     ->placeholder('Never'),
 
+                Tables\Columns\TextColumn::make('data_used_mb')
+                    ->label('Usage')
+                    ->getStateUsing(fn (VpnDevice $record) => $record->formattedUsage())
+                    ->sortable(),
+
                 Tables\Columns\TextColumn::make('created_at')
                     ->label('Added')
                     ->date()
