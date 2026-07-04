@@ -5,12 +5,17 @@ namespace App\Filament\Resources\UserResource\RelationManagers;
 use App\Exceptions\ZenVpnApiException;
 use App\Models\VpnDevice;
 use App\Services\ZenVpnApiService;
-use Filament\Forms;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
+use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
 use Filament\Notifications\Notification;
 use Filament\Resources\RelationManagers\RelationManager;
+use Filament\Actions\Action;
+use Filament\Actions\BulkActionGroup;
+use Filament\Actions\CreateAction;
+use Filament\Actions\DeleteAction;
+use Filament\Actions\DeleteBulkAction;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Support\Facades\Log;
@@ -84,9 +89,9 @@ class VpnDevicesRelationManager extends RelationManager
                 //
             ])
             ->headerActions([
-                Tables\Actions\CreateAction::make()
+                CreateAction::make()
                     ->label('Add Device')
-                    ->before(function (Tables\Actions\CreateAction $action) {
+                    ->before(function (CreateAction $action) {
                         $user = $this->getOwnerRecord();
 
                         // Check limit
@@ -145,14 +150,14 @@ class VpnDevicesRelationManager extends RelationManager
                     }),
             ])
             ->actions([
-                Tables\Actions\Action::make('show_uris')
+                Action::make('show_uris')
                     ->label('Connection URIs')
                     ->icon('heroicon-o-key')
                     ->color('info')
                     ->modalHeading('Connection Config URIs')
                     ->modalSubmitAction(false) // View only
                     ->form([
-                        Forms\Components\Section::make('VPN Configuration URIs')
+                        Section::make('VPN Configuration URIs')
                             ->description('Copy these URIs into your VPN client.')
                             ->collapsible()
                             ->schema([
@@ -178,7 +183,7 @@ class VpnDevicesRelationManager extends RelationManager
                                     ->copyable(),
                             ]),
                     ]),
-                Tables\Actions\DeleteAction::make()
+                DeleteAction::make()
                     ->label('Remove')
                     ->before(function (VpnDevice $record) {
                         $user = $record->user;
@@ -201,8 +206,8 @@ class VpnDevicesRelationManager extends RelationManager
                     }),
             ])
             ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make()
+                BulkActionGroup::make([
+                    DeleteBulkAction::make()
                         ->label('Remove selected')
                         ->before(function ($records) {
                             $api = app(ZenVpnApiService::class);
