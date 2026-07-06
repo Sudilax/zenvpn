@@ -1,0 +1,196 @@
+{
+  "log": {
+    "level": "info",
+    "output": "/var/log/sing-box.log",
+    "timestamp": true
+  },
+  "experimental": {
+    "clash_api": {
+      "external_controller": "127.0.0.1:9090"
+    }
+  },
+  "inbounds": [
+    {
+      "type": "vless",
+      "tag": "vless-in",
+      "listen": "::",
+      "listen_port": 4443,
+      "users": [
+        {
+          "uuid": "EXAMPLE-UUID-HERE",
+          "flow": ""
+        },
+        {
+          "uuid": "EXAMPLE-UUID-HERE",
+          "flow": ""
+        },
+        {
+          "uuid": "EXAMPLE-UUID-HERE",
+          "flow": ""
+        },
+        {
+          "uuid": "EXAMPLE-UUID-HERE",
+          "flow": ""
+        }
+      ],
+      "tls": {
+        "enabled": true,
+        "certificate_path": "/etc/sing-box/certs/server.crt",
+        "key_path": "/etc/sing-box/certs/server.key",
+        "server_name": "m.zoom.us"
+      },
+      "transport": {
+        "type": "ws",
+        "path": "/zen",
+        "headers": {
+          "Host": "m.zoom.us"
+        }
+      }
+    },
+    {
+      "type": "trojan",
+      "tag": "trojan-in",
+      "listen": "::",
+      "listen_port": 8443,
+      "users": [
+        {
+          "password": "EXAMPLE-PASSWORD-HERE"
+        },
+        {
+          "password": "EXAMPLE-PASSWORD-HERE"
+        },
+        {
+          "password": "EXAMPLE-PASSWORD-HERE"
+        },
+        {
+          "password": "EXAMPLE-PASSWORD-HERE"
+        }
+      ],
+      "tls": {
+        "enabled": true,
+        "certificate_path": "/etc/sing-box/certs/server.crt",
+        "key_path": "/etc/sing-box/certs/server.key",
+        "server_name": "m.zoom.us"
+      },
+      "transport": {
+        "type": "ws",
+        "path": "/trojan",
+        "headers": {
+          "Host": "m.zoom.us"
+        }
+      }
+    },
+    {
+      "type": "vmess",
+      "tag": "vmess-in",
+      "listen": "::",
+      "listen_port": 8880,
+      "users": [
+        {
+          "uuid": "EXAMPLE-UUID-HERE",
+          "alterId": 0
+        },
+        {
+          "uuid": "EXAMPLE-UUID-HERE",
+          "alterId": 0
+        },
+        {
+          "uuid": "EXAMPLE-UUID-HERE",
+          "alterId": 0
+        },
+        {
+          "uuid": "EXAMPLE-UUID-HERE",
+          "alterId": 0
+        }
+      ],
+      "transport": {
+        "type": "ws",
+        "path": "/vmess",
+        "headers": {
+          "Host": "m.zoom.us"
+        }
+      }
+    },
+    {
+      "type": "shadowsocks",
+      "tag": "ss-in",
+      "listen": "::",
+      "listen_port": 8388,
+      "method": "aes-256-gcm",
+      "password": "EXAMPLE-PASSWORD-HERE"
+    },
+    {
+      "type": "hysteria2",
+      "tag": "hysteria2-in",
+      "listen": "::",
+      "listen_port": 5443,
+      "up_mbps": 100,
+      "down_mbps": 100,
+      "users": [
+        {
+          "password": "EXAMPLE-PASSWORD-HERE"
+        },
+        {
+          "password": "EXAMPLE-PASSWORD-HERE"
+        },
+        {
+          "password": "EXAMPLE-PASSWORD-HERE"
+        },
+        {
+          "password": "EXAMPLE-PASSWORD-HERE"
+        }
+      ],
+      "tls": {
+        "enabled": true,
+        "certificate_path": "/etc/sing-box/certs/server.crt",
+        "key_path": "/etc/sing-box/certs/server.key",
+        "server_name": "m.zoom.us"
+      }
+    }
+  ],
+  "outbounds": [
+    {
+      "type": "direct",
+      "tag": "direct"
+    },
+    {
+      "type": "socks",
+      "tag": "warp",
+      "server": "127.0.0.1",
+      "server_port": 40000
+    },
+    {
+      "type": "block",
+      "tag": "block"
+    }
+  ],
+  "route": {
+    "rules": [
+      {
+        "geoip": [
+          "private"
+        ],
+        "outbound": "block"
+      },
+      {
+        "domain_suffix": [
+          "netflix.com",
+          "nflxvideo.net",
+          "instagram.com",
+          "facebook.com",
+          "twitter.com",
+          "tiktok.com",
+          "spotify.com",
+          "discord.com",
+          "online-fix.me",
+          "pornhub.com",
+          "anime.nexus",
+          "claude.ai",
+          "whatsapp.com"
+        ],
+        "outbound": "warp"
+      }
+    ],
+    "final": "direct"
+  }
+}

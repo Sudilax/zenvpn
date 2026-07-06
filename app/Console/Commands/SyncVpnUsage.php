@@ -50,8 +50,17 @@ class SyncVpnUsage extends Command
                 
                 // Update per-device usage
                 if (isset($usage['devices']) && is_array($usage['devices'])) {
-                    foreach ($usage['devices'] as $deviceIdentifier => $usedMb) {
-                        $deviceUsedMb = (int) $usedMb;
+                    foreach ($usage['devices'] as $deviceData) {
+                        if (!is_array($deviceData)) {
+                            continue;
+                        }
+
+                        $deviceIdentifier = $deviceData['device'] ?? null;
+                        $deviceUsedMb = isset($deviceData['used_mb']) ? (int) $deviceData['used_mb'] : 0;
+
+                        if (empty($deviceIdentifier)) {
+                            continue;
+                        }
                         
                         // Find the device by identifier, or fallback by name if needed
                         $device = $user->vpnDevices()

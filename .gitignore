@@ -58,3 +58,8 @@ Homestead.json
 .phpactor.json
 auth.json
 a0998d2dcab9c1829f3c2897f393a134be8a4308
+
+infra-reference/sing-box/server.key
+infra-reference/sing-box/credentials.txt
+infra-reference/sing-box/users.json
+config.json
